@@ -20,15 +20,13 @@ export class WebsocketGateway {
   private onlineUsers: any = new Map();
   constructor(private readonly websocketService: WebsocketService) {}
 
-  @SubscribeMessage('Message')
-  eceiveMessages(
-    @MessageBody() data: any,
-    @ConnectedSocket() client: Socket,
-  ): string {
-    this.logger.log('data: ', data);
-    this.logger.log('clientId: ', client.id);
-    client.emit('Message', '服务端发回的消息');
-    return 'Hello world';
+  @SubscribeMessage('emitSendMessage')
+  eceiveMessages(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    client.to(data.roomId).emit('onMessage', data.message);
+    return {
+      code: 200,
+      msg: 'success',
+    };
   }
 
   // 用户上线
