@@ -21,7 +21,8 @@ export class WebsocketGateway {
   constructor(private readonly websocketService: WebsocketService) {}
 
   @SubscribeMessage('emitSendMessage')
-  eceiveMessages(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+  emitSendMessage(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    this.logger.log(data.roomId);
     client.to(data.roomId).emit('onMessage', data.message);
     return {
       code: 200,
@@ -47,9 +48,9 @@ export class WebsocketGateway {
   }
 
   // 接收方同意 后 加入房间
-  @SubscribeMessage('emitJoninRoom')
-  emitJoninRoom(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.emitJoninRoom(data, client);
+  @SubscribeMessage('emitJoinRoom')
+  emitJoinRoom(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    return this.websocketService.emitJoinRoom(data, client);
   }
 
   // 加入房间
@@ -70,6 +71,18 @@ export class WebsocketGateway {
     return this.websocketService.refuseLink(data, client);
   }
 
+  // 接收到视频请求 发送给房间其给他用户
+  @SubscribeMessage('emitCallRemote')
+  emitCallRemote(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    return this.websocketService.emitCallRemote(data, client);
+  }
+
+  //对方同意视频请求
+  @SubscribeMessage('emitAcceptCall')
+  emitAcceptCall(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    return this.websocketService.emitAcceptCall(data, client);
+  }
+
   // 接收  offer 信息
   @SubscribeMessage('emitSendOffer')
   emitSendOffer(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
@@ -83,7 +96,7 @@ export class WebsocketGateway {
   }
 
   // 接收 ice 信息
-  @SubscribeMessage('emitSendIce')
+  @SubscribeMessage('emitSendCandidate')
   emitSendIce(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
     return this.websocketService.emitSendIce(data, client);
   }

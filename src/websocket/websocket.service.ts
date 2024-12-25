@@ -46,7 +46,7 @@ export class WebsocketService {
   }
 
   // 接收方同意链接请求 后 向请求方发送加入房间通知
-  emitJoninRoom(data: any, client: Socket) {
+  emitJoinRoom(data: any, client: Socket) {
     this.joinRoom(data.roomId, client);
     client.to(data.to.socketId).emit('joinDesignatedRoom', {
       roomId: data.roomId,
@@ -84,26 +84,37 @@ export class WebsocketService {
     client.to(data.to.socketId).emit('onRejectLink', data.from);
   }
 
+  emitCallRemote(data: any, client: Socket) {
+    const { roomId, from } = data;
+    client.to(roomId).emit('onCallRemote', { from });
+  }
+
+  emitAcceptCall(data: any, client: Socket) {
+    const { roomId, from } = data;
+    client.to(roomId).emit('onAcceptCall', { from });
+  }
+
   emitSendOffer(data: any, client: Socket) {
-    console.log('emitSendOffer', data, client.id);
-
     const { roomId, from, initiateOffer } = data;
-
     client.to(roomId).emit('onSendOffer', { offer: initiateOffer, from });
   }
 
   // 接收方发送answer
   emitSendAnswer(data: any, client: Socket) {
-    console.log('emitSendAnswer', data, client.id);
-
     const { roomId, from, answer } = data;
-
     client.to(roomId).emit('onSendAnswer', { answer, from });
+    return {
+      code: 200,
+      msg: '发送answer成功',
+    };
   }
 
   emitSendIce(data: any, client: Socket) {
-    console.log('emitSendIceCandidate', data, client.id);
-    const { roomId, candidate } = data;
-    client.to(roomId).emit('onSendIce', { candidate });
+    const { roomId, candidate, from } = data;
+    client.to(roomId).emit('onSendCandidate', { candidate, from });
+    return {
+      code: 200,
+      msg: '发送Ice成功',
+    };
   }
 }
