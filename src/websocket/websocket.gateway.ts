@@ -33,11 +33,11 @@ export class WebsocketGateway {
     this.websocketService.setServer(this.server);
   }
 
-  handleConnection(@ConnectedSocket() socket: Socket) {
+  async handleConnection(@ConnectedSocket() socket: Socket) {
     this.logger.log(`新设备连接: ${socket.id}`);
 
     // 加入公共房间
-    socket.join(this.PUBLIC_ROOM);
+    await socket.join(this.PUBLIC_ROOM);
     this.logger.log(`用户 ${socket.id} 已加入公共房间`);
 
     const user: OnlineUser = {
