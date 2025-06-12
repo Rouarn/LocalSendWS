@@ -8,7 +8,6 @@ import {
 import { WebsocketService } from './websocket.service';
 import { Logger } from '@nestjs/common';
 import { Socket, Server } from 'socket.io';
-// import { faker } from '@faker-js/faker/locale/zh_CN';
 import { fakerZH_CN } from '@faker-js/faker';
 
 interface OnlineUser {
@@ -54,12 +53,11 @@ export class WebsocketGateway {
     this.websocketService.sendMessage(this.onlineUsers);
   }
 
-  @SubscribeMessage('online')
-  handleOnline(
+  @SubscribeMessage('joinTheRoom')
+  handleJoinRoom(
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: { username: string },
   ) {
     this.logger.log(`${data.username} is online`);
-    this.websocketService.sendMessage(this.onlineUsers);
   }
 }
