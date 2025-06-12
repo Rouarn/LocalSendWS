@@ -1,120 +1,38 @@
 import { Injectable } from '@nestjs/common';
-// import { CreateWebsocketDto } from './dto/create-websocket.dto';
-// import { UpdateWebsocketDto } from './dto/update-websocket.dto';
-import { Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Server } from 'socket.io';
 
 interface OnlineUser {
-  deviceID: string;
   socketId: string;
-  deviceName: string;
-  platform: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 @Injectable()
 export class WebsocketService {
-  private lgger = new Logger('WebsocketService');
-  upOnline(data: any, client: Socket, onlineUsers: any) {
-    onlineUsers.set(data.deviceID, {
-      ...data,
-      socketId: client.id,
-    });
-    const onlineList = Array.from(onlineUsers.values());
-    client.broadcast.emit('online', onlineList);
-    this.lgger.log('上线: ', data.deviceName);
-    return onlineList;
+  private server!: Server;
+
+  // 设置 WebSocket 服务器实例
+  setServer(server: Server) {
+    this.server = server;
   }
 
-  downOnline(client: Socket, onlineUsers: any) {
-    const user = Array.from(onlineUsers.values()).find(
-      (item: any) => item.socketId === client.id,
-    ) as OnlineUser;
-
-    // 删除在线用户列表中的用户
-    this.lgger.log('下线: ', user?.deviceName);
-    if (user) {
-      onlineUsers.delete(user.deviceID);
-      client.broadcast.emit('online', Array.from(onlineUsers.values()));
+  // 向所有在线用户发送消息
+  broadcastToAll(event: string, message: any) {
+    if (this.server) {
+      this.server.emit(event, message);
     }
-
-    return '下线';
   }
 
-  // 向指定设备发送链接请求
-  linkRequest(data: any, client: Socket) {
-    client.to(data.to.socketId).emit('onLinkRequest', data.from);
+  // 向特定用户发送消息
+  sendToUser(socketId: string, event: string, message: any) {
+    if (this.server) {
+      this.server.to(socketId).emit(event, message);
+    }
   }
 
-  // 接收方同意链接请求 后 向请求方发送加入房间通知
-  emitJoinRoom(data: any, client: Socket) {
-    this.joinRoom(data.roomId, client);
-    client.to(data.to.socketId).emit('joinDesignatedRoom', {
-      roomId: data.roomId,
-      from: data.from,
-    }); // 向请求发起方发送加入房间通知
-    return {
-      code: 200,
-      msg: '加入房间成功',
-    };
-  }
-
-  // 加入某个房间
-  joinRoom(roomId: string, client: Socket) {
-    client.join(roomId);
-    console.log('加入房间:', roomId);
-    return {
-      code: 200,
-      msg: '加入房间成功',
-    };
-  }
-
-  // 退出某个房间
-  leaveRoom(roomId: string, client: Socket) {
-    client.leave(roomId);
-    console.log('退出房间:', roomId);
-    client.to(roomId).emit('onLeaveDesignatedRoom');
-    return {
-      code: 200,
-      msg: '退出房间成功',
-    };
-  }
-
-  // 接收方拒绝链接请求
-  refuseLink(data: any, client: Socket) {
-    client.to(data.to.socketId).emit('onRejectLink', data.from);
-  }
-
-  emitCallRemote(data: any, client: Socket) {
-    const { roomId, from } = data;
-    client.to(roomId).emit('onCallRemote', { from });
-  }
-
-  emitAcceptCall(data: any, client: Socket) {
-    const { roomId, from } = data;
-    client.to(roomId).emit('onAcceptCall', { from });
-  }
-
-  emitSendOffer(data: any, client: Socket) {
-    const { roomId, from, initiateOffer } = data;
-    client.to(roomId).emit('onSendOffer', { offer: initiateOffer, from });
-  }
-
-  // 接收方发送answer
-  emitSendAnswer(data: any, client: Socket) {
-    const { roomId, from, answer } = data;
-    client.to(roomId).emit('onSendAnswer', { answer, from });
-    return {
-      code: 200,
-      msg: '发送answer成功',
-    };
-  }
-
-  emitSendIce(data: any, client: Socket) {
-    const { roomId, candidate, from } = data;
-    client.to(roomId).emit('onSendCandidate', { candidate, from });
-    return {
-      code: 200,
-      msg: '发送Ice成功',
-    };
+  // 打印在线用户列表
+  sendMessage(onlineUsers: Map<string, OnlineUser>) {
+    const users = Array.from(onlineUsers.values());
+    this.broadcastToAll('online_users', users); // 主动推送在线用户列表
   }
 }

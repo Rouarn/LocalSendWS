@@ -1,103 +1,65 @@
 import {
-  WebSocketGateway,
-  SubscribeMessage,
-  MessageBody,
   ConnectedSocket,
+  MessageBody,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 import { WebsocketService } from './websocket.service';
-// import { CreateWebsocketDto } from './dto/create-websocket.dto';
-// import { UpdateWebsocketDto } from './dto/update-websocket.dto';
-import { Socket } from 'socket.io';
-import { Logger } from '@nestjs/common'; //打印库
+import { Logger } from '@nestjs/common';
+import { Socket, Server } from 'socket.io';
+// import { faker } from '@faker-js/faker/locale/zh_CN';
+import { fakerZH_CN } from '@faker-js/faker';
 
-@WebSocketGateway({
-  cors: {
-    origin: '*', // 允许跨域
-  },
-})
+interface OnlineUser {
+  socketId: string;
+  userName: string;
+  ip: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+@WebSocketGateway({ cors: { origin: '*' } })
 export class WebsocketGateway {
   private readonly logger = new Logger(WebsocketGateway.name);
-  private onlineUsers: any = new Map();
+  private onlineUsers = new Map<string, OnlineUser>();
+
+  @WebSocketServer()
+  server!: Server;
+
   constructor(private readonly websocketService: WebsocketService) {}
 
-  @SubscribeMessage('emitSendMessage')
-  emitSendMessage(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    this.logger.log(data.roomId);
-    client.to(data.roomId).emit('onMessage', data.message);
-    return {
-      code: 200,
-      msg: 'success',
+  afterInit() {
+    this.websocketService.setServer(this.server);
+  }
+
+  handleConnection(@ConnectedSocket() socket: Socket) {
+    this.logger.log(`新设备连接: ${socket.id}`);
+    // console.log(socket);
+
+    const user: OnlineUser = {
+      socketId: socket.id,
+      userName: fakerZH_CN.person.fullName() || '未命名用户',
+      ip: socket.handshake.headers.origin || '未知 IP',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
+    this.onlineUsers.set(socket.id, user);
+    this.websocketService.sendMessage(this.onlineUsers);
   }
 
-  // 用户上线
-  @SubscribeMessage('createWebsocket')
-  upOnline(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.upOnline(data, client, this.onlineUsers);
+  handleDisconnect(@ConnectedSocket() socket: Socket) {
+    this.logger.log(`设备断开连接: ${socket.id}`);
+    this.onlineUsers.delete(socket.id);
+    this.websocketService.sendMessage(this.onlineUsers);
   }
 
-  // 当客户端断开连接时触发
-  handleDisconnect(client: Socket) {
-    return this.websocketService.downOnline(client, this.onlineUsers);
-  }
-
-  // 链接请求 (客户端发送)
-  @SubscribeMessage('emitLinkRequest')
-  linkRequest(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.linkRequest(data, client);
-  }
-
-  // 接收方同意 后 加入房间
-  @SubscribeMessage('emitJoinRoom')
-  emitJoinRoom(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.emitJoinRoom(data, client);
-  }
-
-  // 加入房间
-  @SubscribeMessage('joinRoom')
-  joinRoom(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.joinRoom(data.roomId, client);
-  }
-
-  // 退出房间
-  @SubscribeMessage('emitLeaveRoom')
-  leaveRoom(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.leaveRoom(data.roomId, client);
-  }
-
-  // 接收方拒绝链接
-  @SubscribeMessage('emitCloseRequest')
-  refuseLink(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.refuseLink(data, client);
-  }
-
-  // 接收到视频请求 发送给房间其给他用户
-  @SubscribeMessage('emitCallRemote')
-  emitCallRemote(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.emitCallRemote(data, client);
-  }
-
-  //对方同意视频请求
-  @SubscribeMessage('emitAcceptCall')
-  emitAcceptCall(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.emitAcceptCall(data, client);
-  }
-
-  // 接收  offer 信息
-  @SubscribeMessage('emitSendOffer')
-  emitSendOffer(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.emitSendOffer(data, client);
-  }
-
-  // 接收 answer 信息
-  @SubscribeMessage('emitSendAnswer')
-  emitSendAnswer(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.emitSendAnswer(data, client);
-  }
-
-  // 接收 ice 信息
-  @SubscribeMessage('emitSendCandidate')
-  emitSendIce(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    return this.websocketService.emitSendIce(data, client);
+  @SubscribeMessage('online')
+  handleOnline(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { username: string },
+  ) {
+    this.logger.log(`${data.username} is online`);
+    this.websocketService.sendMessage(this.onlineUsers);
   }
 }
