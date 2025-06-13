@@ -33,6 +33,6 @@ export class WebsocketService {
   // 打印在线用户列表
   sendMessage(onlineUsers: Map<string, OnlineUser>) {
     const users = Array.from(onlineUsers.values());
-    this.broadcastToAll('online_users', users); // 主动推送在线用户列表
+    this.broadcastToAll('listen:onlineUsers', users); // 主动推送在线用户列表
   }
 }

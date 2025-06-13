@@ -12,7 +12,7 @@ import { fakerZH_CN } from '@faker-js/faker';
 
 interface OnlineUser {
   socketId: string;
-  userName: string;
+  socketName: string;
   ip: string;
   createdAt: Date;
   updatedAt: Date;
@@ -22,7 +22,7 @@ interface OnlineUser {
 export class WebsocketGateway {
   private readonly logger = new Logger(WebsocketGateway.name);
   private onlineUsers = new Map<string, OnlineUser>();
-  private readonly PUBLIC_ROOM = 'public_room'; // 定义公共房间名称
+  private readonly PUBLIC_ROOM = 'PUBLIC_ROOM'; // 定义公共房间名称
 
   @WebSocketServer()
   server!: Server;
@@ -33,16 +33,16 @@ export class WebsocketGateway {
     this.websocketService.setServer(this.server);
   }
 
-  handleConnection(@ConnectedSocket() socket: Socket) {
+  async handleConnection(@ConnectedSocket() socket: Socket) {
     this.logger.log(`新设备连接: ${socket.id}`);
 
     // 加入公共房间
-    socket.join(this.PUBLIC_ROOM);
+    await socket.join(this.PUBLIC_ROOM);
     this.logger.log(`用户 ${socket.id} 已加入公共房间`);
 
     const user: OnlineUser = {
       socketId: socket.id,
-      userName: fakerZH_CN.person.fullName() || '未命名用户',
+      socketName: fakerZH_CN.person.fullName() || '未命名用户',
       ip: socket.handshake.headers.origin || '未知 IP',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -52,7 +52,7 @@ export class WebsocketGateway {
 
     // 可选：向公共房间发送欢迎消息
     this.server.to(this.PUBLIC_ROOM).emit('welcome_message', {
-      message: `新用户 ${user.userName} 加入了聊天室`,
+      message: `新用户 ${user.socketName} 加入了聊天室`,
       timestamp: new Date(),
     });
   }
@@ -68,7 +68,7 @@ export class WebsocketGateway {
     // 可选：通知公共房间有用户离开
     if (user) {
       this.server.to(this.PUBLIC_ROOM).emit('goodbye_message', {
-        message: `用户 ${user.userName} 离开了聊天室`,
+        message: `用户 ${user.socketName} 离开了聊天室`,
         timestamp: new Date(),
       });
     }
