@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
 interface OnlineUser {
   socketId: string;
@@ -10,10 +10,15 @@ interface OnlineUser {
 @Injectable()
 export class WebsocketService {
   private server!: Server;
+  private currentRoom!: string;
 
   // 设置 WebSocket 服务器实例
   setServer(server: Server) {
     this.server = server;
+  }
+
+  setCurrentRoom(room: string) {
+    this.currentRoom = room;
   }
 
   // 向所有在线用户发送消息
@@ -31,8 +36,13 @@ export class WebsocketService {
   }
 
   // 打印在线用户列表
-  sendMessage(onlineUsers: Map<string, OnlineUser>) {
+  sendAllMessage(onlineUsers: Map<string, OnlineUser>) {
     const users = Array.from(onlineUsers.values());
     this.broadcastToAll('listen:onlineUsers', users); // 主动推送在线用户列表
+  }
+
+  sendMessage(socket: Socket, data: any) {
+    this.server.to(this.currentRoom).emit('listen:message', data);
+    return { ...data, socketId: socket.id };
   }
 }

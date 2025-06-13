@@ -31,8 +31,9 @@ export class WebsocketGateway {
 
   afterInit() {
     this.websocketService.setServer(this.server);
+    this.websocketService.setCurrentRoom(this.PUBLIC_ROOM);
   }
-
+  // 监听 设备连接
   async handleConnection(@ConnectedSocket() socket: Socket) {
     this.logger.log(`新设备连接: ${socket.id}`);
 
@@ -48,7 +49,7 @@ export class WebsocketGateway {
       updatedAt: new Date(),
     };
     this.onlineUsers.set(socket.id, user);
-    this.websocketService.sendMessage(this.onlineUsers);
+    this.websocketService.sendAllMessage(this.onlineUsers);
 
     // 可选：向公共房间发送欢迎消息
     this.server.to(this.PUBLIC_ROOM).emit('welcome_message', {
@@ -57,13 +58,14 @@ export class WebsocketGateway {
     });
   }
 
+  // 监听断开连接
   handleDisconnect(@ConnectedSocket() socket: Socket) {
     this.logger.log(`设备断开连接: ${socket.id}`);
 
     // 离开时不需要显式调用 leave，Socket.IO 会自动处理
     const user = this.onlineUsers.get(socket.id);
     this.onlineUsers.delete(socket.id);
-    this.websocketService.sendMessage(this.onlineUsers);
+    this.websocketService.sendAllMessage(this.onlineUsers);
 
     // 可选：通知公共房间有用户离开
     if (user) {
@@ -80,5 +82,30 @@ export class WebsocketGateway {
     @MessageBody() data: { username: string },
   ) {
     this.logger.log(`${data.username} is online`);
+  }
+
+  @SubscribeMessage('private_chat')
+  handlePrivateChat(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { message: string; to: string },
+  ) {
+    this.server.to(data.to).emit('private_chat', {
+      message: data.message,
+      from: socket.id,
+    });
+
+    return {
+      message: data.message,
+      from: socket.id,
+    };
+  }
+
+  // Message
+  @SubscribeMessage('message')
+  handleMessage(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { message: string; to: string },
+  ) {
+    return this.websocketService.sendMessage(socket, data);
   }
 }
