@@ -66,14 +66,17 @@ export class UploadsController {
 
     const fileUrl = `/public/${folder}/${file.filename}`;
     return {
-      message: '文件分类上传成功',
-      info: {
-        url: fileUrl,
-        type: file.mimetype,
-        size: file.size,
-        name: file.filename,
+      code: '0000',
+      data: {
+        message: '文件分类上传成功',
+        info: {
+          url: fileUrl,
+          type: file.mimetype,
+          size: file.size,
+          name: file.filename,
+        },
+        filePath: folder,
       },
-      filePath: folder,
     };
   }
 

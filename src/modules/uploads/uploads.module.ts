@@ -31,9 +31,14 @@ import { join } from 'path';
         }
         // 控制上传类型
         if (
-          ['image/jpeg', 'image/png', 'video/mp4', 'video/webm'].includes(
-            file.mimetype,
-          )
+          [
+            'image/jpeg',
+            'image/png',
+            'audio/mp3',
+            'audio/mpeg',
+            'video/mp4',
+            'video/webm',
+          ].includes(file.mimetype)
         ) {
           callback(null, true); // 允许上传
         } else {
