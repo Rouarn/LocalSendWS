@@ -16,7 +16,6 @@ import { join } from 'path';
 @Controller('upload')
 export class UploadsController {
   @Post('image')
-  @Post('image')
   @UseInterceptors(FileInterceptor('file'))
   uploadImage(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
     const protoHeader = req.headers['x-forwarded-proto'];
@@ -45,16 +44,19 @@ export class UploadsController {
       url: fileUrl,
     };
   }
+
   @Post('classified')
   @UseInterceptors(FileInterceptor('file'))
   uploadClassified(
     @UploadedFile() file: Express.Multer.File,
     @Body('type') type: string,
   ) {
+    console.log('Received file:', file); // 检查文件是否正常
+    console.log('Received type:', type); // 检查 type 是否正常
+
     const folder = type || 'others';
     const destination = `./public/${folder}`;
 
-    // 确保目标目录存在
     if (!fs.existsSync(destination)) {
       fs.mkdirSync(destination, { recursive: true });
     }
@@ -62,9 +64,6 @@ export class UploadsController {
     const newPath = path.join(destination, file.filename);
     fs.renameSync(file.path, newPath);
 
-    // const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    // const host = req.get('host');
-    // ${protocol}://${host}  ⬇
     const fileUrl = `/public/${folder}/${file.filename}`;
     return {
       message: '文件分类上传成功',
@@ -84,9 +83,11 @@ export class UploadsController {
    */
   @Delete('deleteFile')
   deleteFile(@Body('filePath') filePath: string) {
+    console.log('filePath: ', filePath);
     try {
       let path = filePath.replace('public', 'public');
-      path = join(__dirname, '../../', path);
+      path = join(__dirname, '../../../', path);
+      console.log('path: ', path);
 
       if (!fs.existsSync(path)) {
         return {

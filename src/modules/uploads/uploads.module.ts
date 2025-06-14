@@ -22,6 +22,9 @@ import { join } from 'path';
         },
       }),
       fileFilter: (_, file, callback) => {
+        console.log('file', file);
+        console.log('file.originalname', file.originalname);
+        console.log('file.mimetype', file.mimetype);
         // 如果为空，则拒绝上传
         if (!file.originalname) {
           callback(new Error('文件为空'), false); // 拒绝上传
