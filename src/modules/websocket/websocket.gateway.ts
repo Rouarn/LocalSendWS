@@ -84,20 +84,36 @@ export class WebsocketGateway {
     this.logger.log(`${data.username} is online`);
   }
 
+  //私聊请求
   @SubscribeMessage('private_chat')
   handlePrivateChat(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { message: string; to: string },
+    @MessageBody()
+    data: {
+      message: string;
+      targetId: string;
+      targetName: string;
+      fromId: string;
+      fromName: string;
+    },
   ) {
-    this.server.to(data.to).emit('private_chat', {
-      message: data.message,
-      from: socket.id,
-    });
+    this.server.to(data.targetId).emit('listen:private_chat', { ...data });
 
-    return {
-      message: data.message,
-      from: socket.id,
-    };
+    return { ...data };
+  }
+
+  // 同意私聊邀请
+  @SubscribeMessage('agree_private_chat')
+  handleAgreePrivateChat(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody()
+    data: { targetId: string; targetName: string },
+  ) {
+    this.server
+      .to(data.targetId)
+      .emit('listen:agree_private_chat', { ...data });
+
+    return { ...data };
   }
 
   // Message
@@ -107,5 +123,53 @@ export class WebsocketGateway {
     @MessageBody() data: { message: string; to: string },
   ) {
     return this.websocketService.sendMessage(socket, data);
+  }
+
+  // 处理通话请求
+  @SubscribeMessage('call-request')
+  handleCallRequest(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody()
+    data: {
+      targetId: string;
+      isVideo: boolean;
+      caller: string;
+    },
+  ) {
+    // 转发给目标用户
+    this.server.to(data.targetId).emit('incoming-call', {
+      callerId: socket.id,
+      caller: data.caller,
+      isVideo: data.isVideo,
+    });
+
+    return { success: true };
+  }
+
+  // 处理offer转发
+  @SubscribeMessage('rtc-offer')
+  handleOffer(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { offer: any; to: string },
+  ) {
+    return this.websocketService.handleOffer(socket, data);
+  }
+
+  // 处理answer转发
+  @SubscribeMessage('rtc-answer')
+  handleAnswer(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { answer: any; to: string },
+  ) {
+    return this.websocketService.handleAnswer(socket, data);
+  }
+
+  // 处理ICE候选转发
+  @SubscribeMessage('rtc-ice-candidate')
+  handleIceCandidate(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { candidate: any; to: string },
+  ) {
+    return this.websocketService.handleIceCandidate(socket, data);
   }
 }

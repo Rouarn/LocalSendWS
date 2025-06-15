@@ -45,4 +45,18 @@ export class WebsocketService {
     this.server.to(this.currentRoom).emit('listen:message', data);
     return { ...data, socketId: socket.id };
   }
+
+  handleOffer(socket: Socket, data: any) {
+    this.server.to(this.currentRoom).emit('listen:offer', data);
+    return { ...data, socketId: socket.id };
+  }
+
+  handleAnswer(socket: Socket, data: any) {
+    this.server.to(this.currentRoom).emit('listen:answer', data);
+    return { ...data, socketId: socket.id };
+  }
+  handleIceCandidate(socket: Socket, data: any) {
+    this.server.to(this.currentRoom).emit('listen:iceCandidate', data);
+    return { ...data, socketId: socket.id };
+  }
 }
