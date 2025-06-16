@@ -135,17 +135,14 @@ export class WebsocketGateway {
     @ConnectedSocket() socket: Socket,
     @MessageBody()
     data: {
-      targetId: string;
+      roomId: string;
       isVideo: boolean;
       caller: string;
+      callerId: string;
     },
   ) {
-    // 转发给目标用户
-    this.server.to(data.targetId).emit('incoming-call', {
-      callerId: socket.id,
-      caller: data.caller,
-      isVideo: data.isVideo,
-    });
+    // 转发给目标用户  (房间)
+    this.websocketService.sendToUser(data.roomId, 'incoming-call', data);
 
     return { success: true };
   }
@@ -154,7 +151,7 @@ export class WebsocketGateway {
   @SubscribeMessage('rtc-offer')
   handleOffer(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { offer: any; to: string },
+    @MessageBody() data: { roomId: string; senderId: string; description: any },
   ) {
     return this.websocketService.handleOffer(socket, data);
   }
