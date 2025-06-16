@@ -41,7 +41,6 @@ export class WebsocketGateway {
 
   afterInit() {
     this.websocketService.setServer(this.server);
-    this.websocketService.setCurrentRoom(this.PUBLIC_ROOM);
   }
   // 监听 设备连接
   async handleConnection(@ConnectedSocket() socket: Socket) {
@@ -65,8 +64,8 @@ export class WebsocketGateway {
     this.server.to(this.PUBLIC_ROOM).emit('welcome_message', {
       id: new Date().getTime(),
       text: `新用户 ${user.socketName} 加入了聊天室`,
-      socketName: user.socketName,
-      senderId: socket.id,
+      socketName: '系统通知',
+      senderId: 'System-Notification',
       timestamp: new Date(),
     });
   }
@@ -85,21 +84,14 @@ export class WebsocketGateway {
       this.server.to(this.PUBLIC_ROOM).emit('goodbye_message', {
         id: new Date().getTime(),
         text: `用户 ${user.socketName} 离开了聊天室`,
-        socketName: user.socketName,
-        senderId: socket.id,
+        socketName: '系统通知',
+        senderId: 'System-Notification',
         timestamp: new Date(),
       });
     }
   }
 
-  //退出上一个房间 并加入新房间
-  @SubscribeMessage('joinTheRoom')
-  handleJoinRoom(@ConnectedSocket() socket: Socket, @MessageBody() data: any) {
-    this.logger.log(`${data.socketId} is online`);
-    return this.websocketService.joinTheRoom(socket, data);
-  }
-
-  //私聊请求
+  // 私聊请求
   @SubscribeMessage('private_chat')
   async handlePrivateChat(
     @ConnectedSocket() socket: Socket,
@@ -111,23 +103,21 @@ export class WebsocketGateway {
       'listen:private_chat',
       data,
     );
-    return this.handleJoinRoom(socket, data);
+    return this.websocketService.joinTheRoom(socket, data);
   }
 
   // 同意私聊邀请
   @SubscribeMessage('agree_private_chat')
   async handleAgreePrivateChat(
     @ConnectedSocket() socket: Socket,
-    @MessageBody()
-    data: privateChat,
+    @MessageBody() data: privateChat,
   ) {
     this.websocketService.sendToUser(
       data.targetId,
       'listen:agree_private_chat',
       data,
     );
-
-    return this.handleJoinRoom(socket, data);
+    return this.websocketService.joinTheRoom(socket, data);
   }
 
   // Message

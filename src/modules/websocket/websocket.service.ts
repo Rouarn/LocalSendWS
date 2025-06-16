@@ -10,15 +10,10 @@ interface OnlineUser {
 @Injectable()
 export class WebsocketService {
   private server!: Server;
-  private currentRoom!: string;
 
   // 设置 WebSocket 服务器实例
   setServer(server: Server) {
     this.server = server;
-  }
-
-  setCurrentRoom(room: string) {
-    this.currentRoom = room;
   }
 
   // 向所有在线用户发送消息
@@ -35,17 +30,23 @@ export class WebsocketService {
     }
   }
 
-  // 打印在线用户列表
+  // 推送打印在线用户列表
   sendAllMessage(onlineUsers: Map<string, OnlineUser>) {
     const users = Array.from(onlineUsers.values());
-    this.broadcastToAll('listen:onlineUsers', users); // 主动推送在线用户列表
+    this.broadcastToAll('listen:onlineUsers', users);
+  }
+
+  // 向特定房间发送消息
+  sendToRoom(room: string, event: string, message: any) {
+    if (this.server) {
+      this.server.to(room).emit(event, message);
+    }
   }
 
   //退出上一个房间 并加入新房间
   async joinTheRoom(socket: Socket, data: any) {
-    await socket.leave(this.currentRoom);
+    await socket.leave(data.roomCurId);
     await socket.join(data.roomId);
-    this.setCurrentRoom(data.roomId);
 
     return {
       roomId: data.roomId,
@@ -54,21 +55,22 @@ export class WebsocketService {
   }
 
   sendMessage(socket: Socket, data: any) {
-    this.server.to(this.currentRoom).emit('listen:message', data);
+    console.log('sendMessage: ', data);
+    this.sendToRoom(data.roomId, 'listen:message', data);
     return { ...data, socketId: socket.id };
   }
 
   handleOffer(socket: Socket, data: any) {
-    this.server.to(this.currentRoom).emit('listen:offer', data);
+    this.sendToRoom(data.roomId, 'listen:offer', data);
     return { ...data, socketId: socket.id };
   }
 
   handleAnswer(socket: Socket, data: any) {
-    this.server.to(this.currentRoom).emit('listen:answer', data);
+    this.sendToRoom(data.roomId, 'listen:answer', data);
     return { ...data, socketId: socket.id };
   }
   handleIceCandidate(socket: Socket, data: any) {
-    this.server.to(this.currentRoom).emit('listen:iceCandidate', data);
+    this.sendToRoom(data.roomId, 'listen:iceCandidate', data);
     return { ...data, socketId: socket.id };
   }
 }
