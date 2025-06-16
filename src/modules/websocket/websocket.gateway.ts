@@ -162,7 +162,7 @@ export class WebsocketGateway {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: { roomId: string; senderId: string; description: any },
   ) {
-    return this.websocketService.sendToRoom(data.roomId, 'listen:answer', data);
+    return this.websocketService.handleAnswer(socket, data);
   }
 
   // 修正 handleIceCandidate 方法
@@ -171,10 +171,6 @@ export class WebsocketGateway {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: { roomId: string; senderId: string; candidate: any },
   ) {
-    return this.websocketService.sendToRoom(
-      data.roomId,
-      'listen:iceCandidate',
-      data,
-    );
+    return this.websocketService.handleIceCandidate(socket, data);
   }
 }
