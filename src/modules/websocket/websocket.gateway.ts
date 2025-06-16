@@ -13,9 +13,19 @@ import { fakerZH_CN } from '@faker-js/faker';
 interface OnlineUser {
   socketId: string;
   socketName: string;
-  ip: string;
+  introduction: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface privateChat {
+  message: string;
+  targetId: string;
+  targetName: string;
+  fromId: string;
+  fromName: string;
+  roomId: string;
+  roomName: string;
 }
 
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -44,7 +54,7 @@ export class WebsocketGateway {
     const user: OnlineUser = {
       socketId: socket.id,
       socketName: fakerZH_CN.person.fullName() || '未命名用户',
-      ip: socket.handshake.headers.origin || '未知 IP',
+      introduction: fakerZH_CN.book.title(),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -53,7 +63,10 @@ export class WebsocketGateway {
 
     // 可选：向公共房间发送欢迎消息
     this.server.to(this.PUBLIC_ROOM).emit('welcome_message', {
-      message: `新用户 ${user.socketName} 加入了聊天室`,
+      id: new Date().getTime(),
+      text: `新用户 ${user.socketName} 加入了聊天室`,
+      socketName: user.socketName,
+      senderId: socket.id,
       timestamp: new Date(),
     });
   }
@@ -70,57 +83,58 @@ export class WebsocketGateway {
     // 可选：通知公共房间有用户离开
     if (user) {
       this.server.to(this.PUBLIC_ROOM).emit('goodbye_message', {
-        message: `用户 ${user.socketName} 离开了聊天室`,
+        id: new Date().getTime(),
+        text: `用户 ${user.socketName} 离开了聊天室`,
+        socketName: user.socketName,
+        senderId: socket.id,
         timestamp: new Date(),
       });
     }
   }
 
+  //退出上一个房间 并加入新房间
   @SubscribeMessage('joinTheRoom')
-  handleJoinRoom(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { username: string },
-  ) {
-    this.logger.log(`${data.username} is online`);
+  handleJoinRoom(@ConnectedSocket() socket: Socket, @MessageBody() data: any) {
+    this.logger.log(`${data.socketId} is online`);
+    return this.websocketService.joinTheRoom(socket, data);
   }
 
   //私聊请求
   @SubscribeMessage('private_chat')
-  handlePrivateChat(
+  async handlePrivateChat(
     @ConnectedSocket() socket: Socket,
     @MessageBody()
-    data: {
-      message: string;
-      targetId: string;
-      targetName: string;
-      fromId: string;
-      fromName: string;
-    },
+    data: privateChat,
   ) {
-    this.server.to(data.targetId).emit('listen:private_chat', { ...data });
-
-    return { ...data };
+    this.websocketService.sendToUser(
+      data.targetId,
+      'listen:private_chat',
+      data,
+    );
+    return this.handleJoinRoom(socket, data);
   }
 
   // 同意私聊邀请
   @SubscribeMessage('agree_private_chat')
-  handleAgreePrivateChat(
+  async handleAgreePrivateChat(
     @ConnectedSocket() socket: Socket,
     @MessageBody()
-    data: { targetId: string; targetName: string },
+    data: privateChat,
   ) {
-    this.server
-      .to(data.targetId)
-      .emit('listen:agree_private_chat', { ...data });
+    this.websocketService.sendToUser(
+      data.targetId,
+      'listen:agree_private_chat',
+      data,
+    );
 
-    return { ...data };
+    return this.handleJoinRoom(socket, data);
   }
 
   // Message
   @SubscribeMessage('message')
   handleMessage(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { message: string; to: string },
+    @MessageBody() data: { message: string },
   ) {
     return this.websocketService.sendMessage(socket, data);
   }

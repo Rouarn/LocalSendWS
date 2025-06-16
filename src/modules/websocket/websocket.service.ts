@@ -29,7 +29,7 @@ export class WebsocketService {
   }
 
   // 向特定用户发送消息
-  sendToUser(socketId: string, event: string, message: any) {
+  sendToUser(socketId: string, event: string, message: any = '消息') {
     if (this.server) {
       this.server.to(socketId).emit(event, message);
     }
@@ -39,6 +39,18 @@ export class WebsocketService {
   sendAllMessage(onlineUsers: Map<string, OnlineUser>) {
     const users = Array.from(onlineUsers.values());
     this.broadcastToAll('listen:onlineUsers', users); // 主动推送在线用户列表
+  }
+
+  //退出上一个房间 并加入新房间
+  async joinTheRoom(socket: Socket, data: any) {
+    await socket.leave(this.currentRoom);
+    await socket.join(data.roomId);
+    this.setCurrentRoom(data.roomId);
+
+    return {
+      roomId: data.roomId,
+      socketId: socket.id,
+    };
   }
 
   sendMessage(socket: Socket, data: any) {
