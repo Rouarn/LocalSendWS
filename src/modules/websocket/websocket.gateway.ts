@@ -160,17 +160,21 @@ export class WebsocketGateway {
   @SubscribeMessage('rtc-answer')
   handleAnswer(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { answer: any; to: string },
+    @MessageBody() data: { roomId: string; senderId: string; description: any },
   ) {
-    return this.websocketService.handleAnswer(socket, data);
+    return this.websocketService.sendToRoom(data.roomId, 'listen:answer', data);
   }
 
-  // 处理ICE候选转发
+  // 修正 handleIceCandidate 方法
   @SubscribeMessage('rtc-ice-candidate')
   handleIceCandidate(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { candidate: any; to: string },
+    @MessageBody() data: { roomId: string; senderId: string; candidate: any },
   ) {
-    return this.websocketService.handleIceCandidate(socket, data);
+    return this.websocketService.sendToRoom(
+      data.roomId,
+      'listen:iceCandidate',
+      data,
+    );
   }
 }
