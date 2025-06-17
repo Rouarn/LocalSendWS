@@ -51,9 +51,6 @@ export class UploadsController {
     @UploadedFile() file: Express.Multer.File,
     @Body('type') type: string,
   ) {
-    console.log('Received file:', file); // 检查文件是否正常
-    console.log('Received type:', type); // 检查 type 是否正常
-
     const folder = type || 'others';
     const destination = `./public/${folder}`;
 
@@ -86,11 +83,9 @@ export class UploadsController {
    */
   @Delete('deleteFile')
   deleteFile(@Body('filePath') filePath: string) {
-    console.log('filePath: ', filePath);
     try {
       let path = filePath.replace('public', 'public');
       path = join(__dirname, '../../../', path);
-      console.log('path: ', path);
 
       if (!fs.existsSync(path)) {
         return {
